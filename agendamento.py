@@ -29,7 +29,7 @@ load_dotenv()
 ##################################
 # CONSTANTES E VARIÁVEIS GLOBAIS
 ##################################
-
+ALWAYS_CONFIRM_BEFORE_PROCEED = os.getenv('ALWAYS_CONFIRM_BEFORE_PROCEED')
 ENVIRONMENT = os.getenv('ENVIRONMENT')
 SPREADSHEET_MANAGEMENT = {}
 SPREADSHEET_MANAGEMENT['staging'] = os.getenv('SPREADSHEET_MANAGEMENT_STAGING')
@@ -40,7 +40,6 @@ RANGE_VISITS = os.getenv('RANGE_VISITS')
 RANGE_HOSPITALS = os.getenv('RANGE_HOSPITALS')
 RANGE_PROFESSIONALS_HOSPITALS = os.getenv('RANGE_PROFESSIONALS_HOSPITALS')
 RANGE_PROFESSIONALS = os.getenv('RANGE_PROFESSIONALS')
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
 AMPLIMED_LOGIN_URL = os.getenv('AMPLIMED_LOGIN_URL')
 AMPLIMED_LOGIN_EMAIL = os.getenv('AMPLIMED_LOGIN_EMAIL')
 AMPLIMED_LOGIN_PASSWORD = os.getenv('AMPLIMED_LOGIN_PASSWORD')
@@ -107,6 +106,7 @@ def getDoctor(hospitalId, firstVisit, currentDoctorName):
 ##################################
 # Obtém um array de CPFs de médicos ativos que atendem no hospital informado
 def getDoctorsForHospital(hospitalId):
+    hospitalId = str(hospitalId).zfill(10)
     dfSelectedRows = dfProfessionalsHospitals.loc[(dfProfessionalsHospitals['Código interno operadora']==hospitalId) &
                                                  (dfProfessionalsHospitals['Status Profissional']=='Ativo')]
     return dfSelectedRows['CPF'].values
@@ -388,7 +388,7 @@ def openAmplimed():
     # o authorization header
     print('Navegando para agenda Amplimed para obter authorization header')
     #chromeBrowser.get("https://app.amplimed.com.br/agenda")
-    wait = WebDriverWait(chromeBrowser, timeout=10)
+    wait = WebDriverWait(chromeBrowser, timeout=30)
     wait.until(EC.element_to_be_clickable((By.XPATH,'//*[@id="navigation"]/ul/li[2]/a'))).click()
     time.sleep(10)
 
@@ -499,14 +499,20 @@ for i in dfPatientsWithoutFirstVisit.index:
     patientAmplimedId = dfPatientsWithoutFirstVisit.loc[i,'ID Amplimed']
     carteirinha = dfPatientsWithoutFirstVisit.loc[i,'Carteirinha']
 
-    print("\n[" + str(i+1) + "] Dados do paciente cuja 1ª visita será inserida: Carteirinha: " + carteirinha + ", Senha de internação: " + inHospitalStayCode + ", Código do hospital: " + hospitalId + ", Data-limite da visita: " + deadline)
+    print("\n[" + str(i+2) + "] Dados do paciente cuja 1ª visita será inserida: Carteirinha: " + carteirinha + ", Senha de internação: " + inHospitalStayCode + ", Código do hospital: " + hospitalId + ", Data-limite da visita: " + deadline)
     
     # processa 1ª visita
     if not processVisit(patientAmplimedId, carteirinha, inHospitalStayCode, hospitalId, deadline, firstVisit=True) :
         continue
     
     # pausa alguns segundos para mimetizar interação humana
-    time.sleep(WAIT_TIME_SECONDS)
+    if ENVIRONMENT == 'production' :
+        time.sleep(WAIT_TIME_SECONDS)
+
+    if ENVIRONMENT == 'staging' or ALWAYS_CONFIRM_BEFORE_PROCEED == 'SIM':
+        userInput = input('Prosseguir? (s/n)')
+        if userInput == 'n' :
+            sys.exit()
 
 ##################################
 # AGENDAMENTOS DE VISITAS DE SEGUIMENTO
@@ -529,13 +535,19 @@ for i in dfVisitsAwaitingNextVisit.index:
     currentDoctorName = dfVisitsAwaitingNextVisit.loc[i,'Profissional']
     deadline = dfVisitsAwaitingNextVisit.loc[i,'Data sugerida']
 
-    print("\n[" + str(i+1) + "] Dados do paciente cuja visita de seguimento será inserida: Carteirinha: " + carteirinha + ", Senha de internação: " + inHospitalStayCode + ", Código do hospital: " + hospitalId + ", Data-limite da visita: " + deadline + ", Nome do médico: " + currentDoctorName)
+    print("\n[" + str(i+2) + "] Dados do paciente cuja visita de seguimento será inserida: Carteirinha: " + carteirinha + ", Senha de internação: " + inHospitalStayCode + ", Código do hospital: " + hospitalId + ", Data-limite da visita: " + deadline + ", Nome do médico: " + currentDoctorName)
     
     # processa nova visita
     if not processVisit(patientAmplimedId, carteirinha, inHospitalStayCode, hospitalId, deadline, False, currentDoctorName) :
         continue
     
     # pausa alguns segundos para mimetizar interação humana
-    time.sleep(WAIT_TIME_SECONDS)
+    if ENVIRONMENT == 'production' :
+        time.sleep(WAIT_TIME_SECONDS)
+
+    if ENVIRONMENT == 'staging' or ALWAYS_CONFIRM_BEFORE_PROCEED == 'SIM':
+        userInput = input('Prosseguir? (s/n)')
+        if userInput == 'n' :
+            sys.exit()
 
 print("\nEXECUÇÃO ENCERRADA.")
