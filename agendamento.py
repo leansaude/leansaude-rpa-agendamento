@@ -30,6 +30,7 @@ load_dotenv()
 # CONSTANTES E VARIÁVEIS GLOBAIS
 ##################################
 ALWAYS_CONFIRM_BEFORE_PROCEED = os.getenv('ALWAYS_CONFIRM_BEFORE_PROCEED')
+ALWAYS_MANUALLY_SOLVE_CAPTCHA = os.getenv('ALWAYS_MANUALLY_SOLVE_CAPTCHA')
 ENVIRONMENT = os.getenv('ENVIRONMENT')
 SPREADSHEET_MANAGEMENT = {}
 SPREADSHEET_MANAGEMENT['staging'] = os.getenv('SPREADSHEET_MANAGEMENT_STAGING')
@@ -77,7 +78,14 @@ def processVisit(patientAmplimedId, carteirinha, inHospitalStayCode, hospitalId,
         return False
 
     doctorAmplimedId = getDoctorAmplimedId(doctorCpf)
+    if doctorAmplimedId == '':
+        print('-- Interrompendo processamento da visita pois não foi localizado o ID Amplimed do médico com o CPF: ' + doctorCpf + " --")
+        return False
+
     doctorName = getDoctorName(doctorCpf)
+    if doctorName == '':
+        print('-- Interrompendo processamento da visita pois não foi localizado o nome do médico com o CPF: ' + doctorCpf + " --")
+        return False
     
     # realiza o agendamento
     scheduleVisit(patientAmplimedId, doctorAmplimedId, deadline, hospitalAmplimedId)
@@ -150,7 +158,12 @@ def scheduleVisit(patientAmplimedId, doctorAmplimedId, deadline, hospitalAmplime
     params['dados[obs_p]'] = '<br>'
     params['dados[utiliza_integracao]'] = 'false'
 
-    print('Preparando chamada à API: ' + url)
+    print("\nDados do agendamento:")
+    print('Data: ' + dateForAmplimed)
+    print('Hora inicial: ' + startTime)
+    print('Hora final: ' + endTime)
+
+    print("\nPreparando chamada à API: " + url)
     print('-- params: ' + urlencode(params) + ' --')
 
     response = callAmplimedApi(url, 'POST', urlencode(params))
@@ -364,8 +377,8 @@ def openAmplimed():
     loginPassword = chromeBrowser.find_element(By.XPATH, '//*[@id="loginform"]/div[2]/div/div/input')
     loginPassword.send_keys(AMPLIMED_LOGIN_PASSWORD)
 
-    # só executa anti-captcha no ambiente produtivo. Em homologação, aguarda ação manual do usuário
-    if ENVIRONMENT == 'production' :
+    # só executa anti-captcha se assim configurado
+    if ALWAYS_MANUALLY_SOLVE_CAPTCHA != 'SIM' :
         print("Iniciando destravamento do Captcha")
         solver = recaptchaV2Proxyless()
         solver.set_verbose(1)
@@ -382,7 +395,7 @@ def openAmplimed():
             print(solver.err_string)
 
         time.sleep(10)
-    else : # staging
+    else : # ALWAYS_MANUALLY_SOLVE_CAPTCHA == 'SIM'
         print("--> AGUARDANDO 30 SEGUNDOS PARA EFETUAR LOGIN MANUAL NO AMPLIMED... <--")
         time.sleep(30)
 
@@ -508,10 +521,9 @@ for i in dfPatientsWithoutFirstVisit.index:
         continue
     
     # pausa alguns segundos para mimetizar interação humana
-    if ENVIRONMENT == 'production' :
-        time.sleep(WAIT_TIME_SECONDS)
+    time.sleep(WAIT_TIME_SECONDS)
 
-    if ENVIRONMENT == 'staging' or ALWAYS_CONFIRM_BEFORE_PROCEED == 'SIM':
+    if ALWAYS_CONFIRM_BEFORE_PROCEED == 'SIM':
         userInput = input('Prosseguir? (s/n)')
         if userInput == 'n' :
             sys.exit()
@@ -544,10 +556,9 @@ for i in dfVisitsAwaitingNextVisit.index:
         continue
     
     # pausa alguns segundos para mimetizar interação humana
-    if ENVIRONMENT == 'production' :
-        time.sleep(WAIT_TIME_SECONDS)
+    time.sleep(WAIT_TIME_SECONDS)
 
-    if ENVIRONMENT == 'staging' or ALWAYS_CONFIRM_BEFORE_PROCEED == 'SIM':
+    if ALWAYS_CONFIRM_BEFORE_PROCEED == 'SIM':
         userInput = input('Prosseguir? (s/n)')
         if userInput == 'n' :
             sys.exit()
