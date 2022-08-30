@@ -53,6 +53,8 @@ STAGING_AMPLIMED_DOCTOR_ID = os.getenv('STAGING_AMPLIMED_DOCTOR_ID')
 STAGING_AMPLIMED_HOSPITAL_ID = os.getenv('STAGING_AMPLIMED_HOSPITAL_ID')
 STAGING_AMPLIMED_PATIENT_ID = os.getenv('STAGING_AMPLIMED_PATIENT_ID')
 WAIT_TIME_SECONDS = int(os.getenv('WAIT_TIME_SECONDS'))
+MIN_SCHEDULE_HOUR = int(os.getenv('MIN_SCHEDULE_HOUR'))
+MAX_SCHEDULE_HOUR = int(os.getenv('MAX_SCHEDULE_HOUR'))
 chromeBrowser = None
 nextVisitRowIndex = None
 
@@ -214,9 +216,9 @@ def scheduleVisit(patientAmplimedId, doctorAmplimedId, deadline, hospitalAmplime
     #response #remover   
 
 ##################################
-# Obtém o horário de início da visita (HH:MM), entre 08:00 e 17:30
+# Obtém o horário de início da visita (HH:MM), entre MIN_SCHEDULE_HOUR e MAX_SCHEDULE_HOUR
 def getStartTime():
-    hour = str(randint(8, 17)).zfill(2)
+    hour = str(randint(MIN_SCHEDULE_HOUR, MAX_SCHEDULE_HOUR)).zfill(2)
     
     minute = randint(0, 1)
     if (minute == 0) :
