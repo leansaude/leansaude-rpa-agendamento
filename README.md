@@ -2,10 +2,17 @@
 Identifica visitas médicas pendentes de agendamento e realiza os agendamentos no Amplimed.
 
 ## Observações
-1. Ao clonar o repositório, não esqueça de criar um arquivo .env baseado no exemmplo contido em .env.exemplo. 
+<<<<<<< Updated upstream
+1. Ao clonar o repositório, não esqueça de criar um arquivo .env baseado no exemplo contido em .env.exemplo. 
 Ajuste as configurações como desejar.
 
-2. Este repositório faz uso de virtuel envs do python. Para usá-lo, você precisa ter a seguinte dependência instalada globalmente em seu computador:
+2. Este repositório faz uso de virtual envs do python. Para usá-lo, você precisa ter a seguinte dependência instalada globalmente em seu computador:
+=======
+1. Ao clonar o repositório, não esqueça de criar um arquivo .env baseado no exemplo contido em .env.exemplo. 
+Ajuste as configurações como desejar.
+
+2. Este repositório faz uso de virtual envs do python. Para usá-lo, você precisa ter a seguinte dependência instalada globalmente em seu computador:
+>>>>>>> Stashed changes
 ```
 pip install virtualenv
 ```
