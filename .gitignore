@@ -53,6 +53,7 @@ resources/
 
 # Env
 .env
+env/
 
 # draft files
 comandos.draft.txt
