@@ -9,6 +9,11 @@ Ajuste as configurações como desejar.
 ```
 pip install virtualenv
 ```
+Depois, inicie o virtual env na pasta do repo local:
+```
+cd <caminho-do-seu-repo>
+virtualenv env
+```
 
 3. As dependências específicas deste projeto estão descritas em requirements.txt. 
 Instale-as rodando:
