@@ -54,6 +54,7 @@ STAGING_AMPLIMED_PATIENT_ID = os.getenv('STAGING_AMPLIMED_PATIENT_ID')
 WAIT_TIME_SECONDS = int(os.getenv('WAIT_TIME_SECONDS'))
 MIN_SCHEDULE_HOUR = int(os.getenv('MIN_SCHEDULE_HOUR'))
 MAX_SCHEDULE_HOUR = int(os.getenv('MAX_SCHEDULE_HOUR'))
+MAX_GOOGLE_API_TRIES = int(os.getenv('MAX_GOOGLE_API_TRIES'))
 chromeBrowser = None
 nextVisitRowIndex = None
 
@@ -116,7 +117,8 @@ def getDoctor(hospitalId, firstVisit, currentDoctorName):
 def getDoctorsForHospital(hospitalId):
     hospitalId = str(hospitalId).zfill(10)
     dfSelectedRows = dfProfessionalsHospitals.loc[(dfProfessionalsHospitals['Código interno operadora']==hospitalId) &
-                                                 (dfProfessionalsHospitals['Status Profissional']=='Ativo')]
+                                                  (dfProfessionalsHospitals['Status Profissional']=='Ativo') &
+                                                  (dfProfessionalsHospitals['Status Hospital atendimento']=='Sim')]
     return dfSelectedRows['CPF'].values
 
 ##################################
@@ -438,16 +440,31 @@ googleSpreadsheetService = build('sheets', 'v4')
 sheet = googleSpreadsheetService.spreadsheets()
 
 # Obtém Pacientes
-resultPatients = sheet.values().get(spreadsheetId = SPREADSHEET_MANAGEMENT[ENVIRONMENT],
-                                    range = RANGE_PATIENTS).execute()
+for x in range(MAX_GOOGLE_API_TRIES):
+    try:
+        print('Tentativa ' + str(x+1) + ': obtenção de pacientes pela API Google Sheet')
+        resultPatients = sheet.values().get(spreadsheetId = SPREADSHEET_MANAGEMENT[ENVIRONMENT],
+                                            range = RANGE_PATIENTS).execute()
+        break
+    except Exception as e:
+        print(e)
+        continue
+
 valuesPatients = resultPatients.get('values', [])
 dfPatients = pd.DataFrame(valuesPatients[1:], columns=valuesPatients[0])
 #dfPatients #remover
 print('Lidos ' + str(len(dfPatients.index)) + ' registros de pacientes.')
 
 # Obtém Visitas
-resultVisits = sheet.values().get(spreadsheetId = SPREADSHEET_MANAGEMENT[ENVIRONMENT],
-                                  range = RANGE_VISITS).execute()
+for x in range(MAX_GOOGLE_API_TRIES):
+    try:
+        print('Tentativa ' + str(x+1) + ': obtenção de visitas pela API Google Sheet')
+        resultVisits = sheet.values().get(spreadsheetId = SPREADSHEET_MANAGEMENT[ENVIRONMENT],
+                                          range = RANGE_VISITS).execute()
+        break
+    except Exception as e:
+        print(e)
+        continue
 
 valuesVisits = resultVisits.get('values', [])
 dfVisits = pd.DataFrame(valuesVisits[1:], columns=valuesVisits[0])
@@ -462,8 +479,15 @@ nextVisitRowIndex = len(dfVisitsColB.index) + 2
 print('Posição da próxima visita a ser inserida:  ' + str(nextVisitRowIndex))
 
 # Obtém Hospitais com atuação
-resultHospitals = sheet.values().get(spreadsheetId = SPREADSHEET_HOSPITALS,
-                                     range = RANGE_HOSPITALS).execute()
+for x in range(MAX_GOOGLE_API_TRIES):
+    try:
+        print('Tentativa ' + str(x+1) + ': obtenção de hospitais pela API Google Sheet')
+        resultHospitals = sheet.values().get(spreadsheetId = SPREADSHEET_HOSPITALS,
+                                             range = RANGE_HOSPITALS).execute()
+        break
+    except Exception as e:
+        print(e)
+        continue
 
 valuesHospitals = resultHospitals.get('values', [])
 dfHospitals = pd.DataFrame(valuesHospitals[1:], columns=valuesHospitals[0])
@@ -472,8 +496,15 @@ dfHospitals = dfHospitals.loc[dfHospitals['hospital_com_atuação']=='Sim']
 print('Lidos ' + str(len(dfHospitals.index)) + ' registros de hospitais com atuação.')
 
 # Obtém cruzamento Profissionais x Hospitais
-resultProfessionalsHospitals = sheet.values().get(spreadsheetId = SPREADSHEET_HOSPITALS,
-                                                  range = RANGE_PROFESSIONALS_HOSPITALS).execute()
+for x in range(MAX_GOOGLE_API_TRIES):
+    try:
+        print('Tentativa ' + str(x+1) + ': obtenção de cruzamento Profissionais x Hospitais pela API Google Sheet')
+        resultProfessionalsHospitals = sheet.values().get(spreadsheetId = SPREADSHEET_HOSPITALS,
+                                                        range = RANGE_PROFESSIONALS_HOSPITALS).execute()
+        break
+    except Exception as e:
+        print(e)
+        continue
 
 valuesProfessionalsHospitals = resultProfessionalsHospitals.get('values', [])
 dfProfessionalsHospitals = pd.DataFrame(valuesProfessionalsHospitals[1:], columns=valuesProfessionalsHospitals[0])
@@ -481,8 +512,15 @@ dfProfessionalsHospitals = pd.DataFrame(valuesProfessionalsHospitals[1:], column
 print('Lidos ' + str(len(dfProfessionalsHospitals.index)) + ' registros de correlação profissionais x hospitais.')
 
 # Obtém Profissionais (médicos) ativos
-resultProfessionals = sheet.values().get(spreadsheetId = SPREADSHEET_MANAGEMENT[ENVIRONMENT],
-                                         range = RANGE_PROFESSIONALS).execute()
+for x in range(MAX_GOOGLE_API_TRIES):
+    try:
+        print('Tentativa ' + str(x+1) + ': obtenção de profissionais pela API Google Sheet')
+        resultProfessionals = sheet.values().get(spreadsheetId = SPREADSHEET_MANAGEMENT[ENVIRONMENT],
+                                                range = RANGE_PROFESSIONALS).execute()
+        break
+    except Exception as e:
+        print(e)
+        continue
 
 valuesProfessionals = resultProfessionals.get('values', [])
 dfProfessionals = pd.DataFrame(valuesProfessionals[1:], columns=valuesProfessionals[0])
@@ -497,9 +535,11 @@ print('Lidos ' + str(len(dfProfessionals.index)) + ' registros de profissionais 
 
 print("\nAGENDAMENTOS DE PRIMEIRA VISITA")
 
-# seleciona pacientes com status "Novo" (=sem visita "Realizada") e que não possuam nenhuma visita "Agendada"
+# seleciona pacientes com status "Novo" (=sem visita "Realizada"), não possuam nenhuma visita "Agendada"
+# e estejam cadastrados no Amplimed
 dfPatientsWithoutFirstVisit = dfPatients.loc[(dfPatients['Status']=='Novo') & 
-                                             (dfPatients['possui_alguma_visita_agendada']=='0')]
+                                             (dfPatients['possui_alguma_visita_agendada']=='0') &
+                                             (dfPatients['Status de cadastro na Amplimed']=='Cadastrado')]
 #dfPatientsWithoutFirstVisit #remover
 print('Localizados ' + str(len(dfPatientsWithoutFirstVisit.index)) + ' pacientes com 1ª visita pendente.')
 
@@ -516,6 +556,9 @@ for i in dfPatientsWithoutFirstVisit.index:
     
     # processa 1ª visita
     if not processVisit(patientAmplimedId, carteirinha, inHospitalStayCode, hospitalId, deadline, firstVisit=True) :
+        userInput = input('Prosseguir? (s/n)')
+        if userInput == 'n' :
+            sys.exit()
         continue
     
     # pausa alguns segundos para mimetizar interação humana
@@ -551,6 +594,9 @@ for i in dfVisitsAwaitingNextVisit.index:
     
     # processa nova visita
     if not processVisit(patientAmplimedId, carteirinha, inHospitalStayCode, hospitalId, deadline, False, currentDoctorName) :
+        userInput = input('Prosseguir? (s/n)')
+        if userInput == 'n' :
+            sys.exit()        
         continue
     
     # pausa alguns segundos para mimetizar interação humana
