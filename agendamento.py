@@ -116,7 +116,8 @@ def getDoctor(hospitalId, firstVisit, currentDoctorName):
 def getDoctorsForHospital(hospitalId):
     hospitalId = str(hospitalId).zfill(10)
     dfSelectedRows = dfProfessionalsHospitals.loc[(dfProfessionalsHospitals['Código interno operadora']==hospitalId) &
-                                                 (dfProfessionalsHospitals['Status Profissional']=='Ativo')]
+                                                 (dfProfessionalsHospitals['Status Profissional']=='Ativo') &
+                                                 (dfProfessionalsHospitals['Status Hospital atendimento']=='Sim')]
     return dfSelectedRows['CPF'].values
 
 ##################################
