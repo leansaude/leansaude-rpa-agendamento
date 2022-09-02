@@ -116,8 +116,8 @@ def getDoctor(hospitalId, firstVisit, currentDoctorName):
 def getDoctorsForHospital(hospitalId):
     hospitalId = str(hospitalId).zfill(10)
     dfSelectedRows = dfProfessionalsHospitals.loc[(dfProfessionalsHospitals['Código interno operadora']==hospitalId) &
-                                                 (dfProfessionalsHospitals['Status Profissional']=='Ativo') &
-                                                 (dfProfessionalsHospitals['Status Hospital atendimento']=='Sim')]
+                                                  (dfProfessionalsHospitals['Status Profissional']=='Ativo') &
+                                                  (dfProfessionalsHospitals['Status Hospital atendimento']=='Sim')]
     return dfSelectedRows['CPF'].values
 
 ##################################
@@ -498,9 +498,11 @@ print('Lidos ' + str(len(dfProfessionals.index)) + ' registros de profissionais 
 
 print("\nAGENDAMENTOS DE PRIMEIRA VISITA")
 
-# seleciona pacientes com status "Novo" (=sem visita "Realizada") e que não possuam nenhuma visita "Agendada"
+# seleciona pacientes com status "Novo" (=sem visita "Realizada"), não possuam nenhuma visita "Agendada"
+# e estejam cadastrados no Amplimed
 dfPatientsWithoutFirstVisit = dfPatients.loc[(dfPatients['Status']=='Novo') & 
-                                             (dfPatients['possui_alguma_visita_agendada']=='0')]
+                                             (dfPatients['possui_alguma_visita_agendada']=='0') &
+                                             (dfPatients['Status de cadastro na Amplimed']=='Cadastrado')]
 #dfPatientsWithoutFirstVisit #remover
 print('Localizados ' + str(len(dfPatientsWithoutFirstVisit.index)) + ' pacientes com 1ª visita pendente.')
 
