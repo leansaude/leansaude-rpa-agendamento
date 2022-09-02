@@ -519,6 +519,9 @@ for i in dfPatientsWithoutFirstVisit.index:
     
     # processa 1ª visita
     if not processVisit(patientAmplimedId, carteirinha, inHospitalStayCode, hospitalId, deadline, firstVisit=True) :
+        userInput = input('Prosseguir? (s/n)')
+        if userInput == 'n' :
+            sys.exit()
         continue
     
     # pausa alguns segundos para mimetizar interação humana
@@ -554,6 +557,9 @@ for i in dfVisitsAwaitingNextVisit.index:
     
     # processa nova visita
     if not processVisit(patientAmplimedId, carteirinha, inHospitalStayCode, hospitalId, deadline, False, currentDoctorName) :
+        userInput = input('Prosseguir? (s/n)')
+        if userInput == 'n' :
+            sys.exit()        
         continue
     
     # pausa alguns segundos para mimetizar interação humana
