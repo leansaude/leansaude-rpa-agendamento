@@ -21,6 +21,7 @@ from googleapiclient.errors import HttpError
 from urllib.parse import urlencode
 from random import randint, choice
 import sys
+import re
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -66,31 +67,59 @@ nextVisitRowIndex = None
 def processVisit(patientAmplimedId, carteirinha, inHospitalStayCode, hospitalId, deadline, firstVisit, currentDoctorName=None):
     # obtém código Amplimed do hospital de agendamento
     hospitalAmplimedId = getHospitalAmplimedId(hospitalId)
-    if (hospitalAmplimedId == ''):
-        print('-- Interrompendo processamento da visita por não ter sido localizado o hospital: ' + hospitalId + " --")
+    if (hospitalAmplimedId == '' or not hospitalAmplimedId):
+        print('-- Interrompendo processamento da visita por não ter sido localizado o ID Amplimed do hospital: ' + hospitalId + " --")
         return False
     
     # obtém o médico com quem agendar
     doctorCpf = getDoctor(hospitalId, firstVisit, currentDoctorName)
-    if doctorCpf == '':
+    if (doctorCpf == '' or not doctorCpf):
         print('-- Interrompendo processamento da visita pela ausência de médico atuando no hospital: ' + hospitalId + " --")
         return False
 
     doctorAmplimedId = getDoctorAmplimedId(doctorCpf)
-    if doctorAmplimedId == '':
+    if (doctorAmplimedId == '' or not doctorAmplimedId):
         print('-- Interrompendo processamento da visita pois não foi localizado o ID Amplimed do médico com o CPF: ' + doctorCpf + " --")
         return False
 
     doctorName = getDoctorName(doctorCpf)
-    if doctorName == '':
+    if (doctorName == '' or not doctorName):
         print('-- Interrompendo processamento da visita pois não foi localizado o nome do médico com o CPF: ' + doctorCpf + " --")
         return False
+
+    # checa data-limite da visita
+    if not checkDeadline(deadline):
+        print('-- Interrompendo processamento da visita pois data-limite está inconsistente: ' + deadline + " --")
+        return False        
     
     # realiza o agendamento
     scheduleVisit(patientAmplimedId, doctorAmplimedId, deadline, hospitalAmplimedId)
     
     # insere a nova linha na planilha Visitas
     addVisitRow(carteirinha, inHospitalStayCode, doctorName, deadline)
+
+    return True
+
+##################################
+# Checa se a data limite é consistente
+def checkDeadline(deadline):
+    # formato DD/MM/YYYY?
+    if not re.match(r"^\d{2}\/\d{2}\/\d{4}$", deadline):
+        return False
+
+    # intervalos numéricos consistentes?
+    parts = deadline.split('/')
+    day = int(parts[0])
+    month = int(parts[1])
+    year = int(parts[2])
+    if day < 1 or day > 31 :
+        return False
+
+    if month < 1 or month > 12 :
+        return False
+
+    if year < 2022 or year > 2050 :
+        return False
 
     return True
 
@@ -128,7 +157,7 @@ def scheduleVisit(patientAmplimedId, doctorAmplimedId, deadline, hospitalAmplime
         patientAmplimedId = STAGING_AMPLIMED_PATIENT_ID
         doctorAmplimedId = STAGING_AMPLIMED_DOCTOR_ID
         hospitalAmplimedId = STAGING_AMPLIMED_HOSPITAL_ID
-    
+
     # 1ª chamada à API: cadastrar agendamento
     url = 'https://app.amplimed.com.br/pag/AGEnda_new/acoes/CRUDagendamento.php'
     startTime = getStartTime()
